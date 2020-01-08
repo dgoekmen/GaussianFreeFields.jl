@@ -3,7 +3,6 @@ __precompile__(true)
 module GaussianFreeFields
 
 import Contour,
-       Graphics2D,
        Interpolations
 
 export DGFF,
@@ -129,14 +128,6 @@ function inside(p::Array{Float64,1},γ::Array{Float64,2})
         end
     end
     return isodd(cntr)    
-end
-
-import Graphics2D.Line
-
-function Line(curve::Contour.Curve2{Float64};args...)
-    cv = curve.vertices
-    return Line(hcat(Float64[cv[k][1] for k=1:length(cv)], 
-    Float64[cv[k][2] for k=1:length(cv)]);args...)
 end
 
 import Interpolations.interpolate
