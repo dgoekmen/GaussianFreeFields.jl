@@ -4,7 +4,9 @@ module GaussianFreeFields
 
 import Contour,
        Interpolations,
-       FFTW
+       FFTW,
+       SparseArrays,
+       LinearAlgebra
 
 export DGFF,
        fix_boundary_values,
@@ -42,11 +44,11 @@ function fix_boundary_values(h::Array{Float64,2},
                              boundary_values::Array{Float64,2}=zeros(h))
     m,n = size(h)
     #sparse matrix with ones in top left, lower right positions
-    cornersonly(m) = sparse([1,m],[1,m],[1.0,1.0])
+    cornersonly(m) = SparseArrays.sparse([1,m],[1,m],[1.0,1.0])
     #sparse matrix with ones along diagonal except top-left, lower-right
-    eyenocorners(n) = speye(n) - cornersonly(n)
+    eyenocorners(n) = SparseArrays.sparse(LinearAlgebra.I,n,n) - cornersonly(n)
     A = cornersonly(m)
-    B = speye(n)
+    B = SparseArrays.sparse(LinearAlgebra.I,n,n)
     D_dense = zeros(n,n); 
     for i=1:n-1 
         D_dense[i,i+1] = -1; 
@@ -57,7 +59,7 @@ function fix_boundary_values(h::Array{Float64,2},
     D_dense[1,2] = 0 
     D_dense[n,n-1] = 0
     D_dense[n,n] = 1
-    D = sparse(D_dense);
+    D = SparseArrays.sparse(D_dense);
     E_dense = zeros(m,m)
     for i=1:m-1 
         E_dense[i,i+1]=-1
@@ -65,7 +67,7 @@ function fix_boundary_values(h::Array{Float64,2},
     end
     E_dense[m,m-1] = 0
     E_dense[1,2] = 0
-    E = sparse(E_dense)
+    E = SparseArrays.sparse(E_dense)
     Δ = kron(A,B) + kron(eyenocorners(m),D) + kron(E,eyenocorners(n))
     boundary = zeros(m*n)
     for i in 1:m-1
@@ -78,7 +80,7 @@ function fix_boundary_values(h::Array{Float64,2},
     end
     boundary[end] = h[m,n]
     
-    return h - transpose(reshape(full(lufact(Δ) \ boundary),n,m))
+    return h - transpose(reshape(Array(LinearAlgebra.lu(Δ) \ boundary),n,m))
 end
 
 function harmonicextension(h::Array{T,2},vertices::Set) where T<:Number
@@ -108,8 +110,8 @@ function harmonicextension(h::Array{T,2},vertices::Set) where T<:Number
             end
         end
     end
-    A = sparse(I,J,V)
-    return reshape(lufact(A) \ b,m,n)
+    A = SparseArrays.sparse(I,J,V)
+    return reshape(LinearAlgebra.lu(A) \ b,m,n)
 end
 
 # `inside` determines whether a point p is inside a curve γ
@@ -175,4 +177,5 @@ flowline(h::Array{Float64,2},
          S::Set{Complex{Float64}}=Set()) = flowline(interpolate(h),z0,χ,θ,δ,S)
 
 end # module
+
 
