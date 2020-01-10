@@ -3,7 +3,8 @@ __precompile__(true)
 module GaussianFreeFields
 
 import Contour,
-       Interpolations
+       Interpolations,
+       FFTW
 
 export DGFF,
        fix_boundary_values,
@@ -19,7 +20,7 @@ function DGFF(n::Int)
             h[j,k] = 1/sqrt(2.0)*(j+k == 2 ? 0 : (randn() + im*randn()) * 1/sqrt(sin((j-1)*pi/n)^2+ sin((k-1)*pi/n)^2))
         end
     end
-    return real(n*1/sqrt(2)*ifft(h))
+    return real(n*1/sqrt(2)*FFTW.ifft(h))
 end
 
 function DGFF(m::Int,n::Int)
@@ -31,7 +32,7 @@ function DGFF(m::Int,n::Int)
                                   1/sqrt(sin((j-1)*pi/m)^2+(sin((k-1)*pi/n))^2))
         end
     end
-    return real(n/sqrt(2)*ifft(h))
+    return real(n/sqrt(2)*FFTW.ifft(h))
 end
 
 "Return the array obtained by subtracting from `h` the 
@@ -80,7 +81,7 @@ function fix_boundary_values(h::Array{Float64,2},
     return h - transpose(reshape(full(lufact(Δ) \ boundary),n,m))
 end
 
-function harmonicextension{T<:Number}(h::Array{T,2},vertices::Set)
+function harmonicextension(h::Array{T,2},vertices::Set) where T<:Number
     m,n = size(h)
     function neighbors(i::Int,j::Int)
         return [(i-1,j),(i+1,j),(i,j-1),(i,j+1)]
@@ -102,6 +103,7 @@ function harmonicextension{T<:Number}(h::Array{T,2},vertices::Set)
                     j = vertexmap[nb]
                     push!(I,k); push!(J,j); push!(V,1)
                     push!(I,k); push!(J,k); push!(V,-1)
+                catch
                 end
             end
         end
@@ -173,3 +175,4 @@ flowline(h::Array{Float64,2},
          S::Set{Complex{Float64}}=Set()) = flowline(interpolate(h),z0,χ,θ,δ,S)
 
 end # module
+
